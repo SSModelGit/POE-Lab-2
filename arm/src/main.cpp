@@ -9,6 +9,9 @@ void printData();
 Servo servo[2];  // create servo object to control a servo
 int base_pin[2] = {9, 10};
 int spos[2] = {0,0};    // variable to store the servo position
+int a_limit = 90; // Angle limit of the servo
+int offset = 45;
+unsigned long duration = 50;
 bool updated[2] = {false, false};
 
 int count, total = 0;
@@ -31,19 +34,19 @@ void setup() {
 }
 
 void loop() {
-		innerServoHold(2000);
+		innerServoHold(duration);
 		if(updated[0]) {
-				spos[0] = (spos[0]+1)%180;
+				spos[0] = (spos[0]+1)%a_limit;
 				updated[0] = false;
 		}
 }
 
 void innerServoHold(unsigned long holdDuration) {
-		if (millis() - lastTime[0] < holdDuration * 180) {
-				servo[0].write(spos[0]);
+		if (millis() - lastTime[0] < holdDuration * a_limit) {
+				servo[0].write(spos[0]+offset);
 				outerServoHold(holdDuration);
 				if(updated[1]) {
-						spos[1] = (spos[1]+1)%180;
+						spos[1] = (spos[1]+1)%a_limit;
 						updated[1] = false;
 				}
 		}
@@ -56,7 +59,7 @@ void innerServoHold(unsigned long holdDuration) {
 
 void outerServoHold(unsigned long holdDuration) {
 		if (millis() - lastTime[1] < holdDuration) {
-				servo[1].write(spos[1]);
+				servo[1].write(spos[1]+offset);
 				gatherData();
 		}
 		else {
