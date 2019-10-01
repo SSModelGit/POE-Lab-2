@@ -7,7 +7,9 @@ def load_data(path: str) -> pd.DataFrame:
     """
     Loads in the scan data from the csv and converts it to a dataframe
     """
-    pd.DataFrame()
+    pd.read_csv(path)
+
+    
 
     
     pass
