@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import CubicSpline
 from scipy.spatial.transform import Rotation
 from mpl_toolkits.mplot3d import Axes3D
+import seaborn as sns
 
 
 
@@ -12,21 +13,26 @@ class scanner:
         self.calibration_data = None
         self.cs = None
 
-
     def calibrate(self, path: str):
+        """
+        Sets the internal cubic spline function from a calibration file
+        """
         self.calibration_data = pd.read_csv(path, names=["distance", "voltage"])
         
         # Set the indepdent variable to be voltage
-        self.calib_xs = self.calibration_data['voltage'].to_numpy()
+        self.calib_xs = self.calibration_data['voltage'].to_numpy()[3:] * -2.54
 
         # So that we get a distance as an output
-        self.calib_ys = self.calibration_data['distance'].to_numpy();
+        self.calib_ys = self.calibration_data['distance'].to_numpy()[3:]
 
         self.cs = CubicSpline(self.calib_xs, self.calib_ys)
 
     def plot_calibration_curve(self):
+        """
+        Plots the scanners associated calibration curve
+        """
         fig = plt.figure()
-        xs = np.linspace(0, self.calibration_data['distance'].to_numpy().max());
+        xs = np.linspace(0, self.calib_xs.max());
         ys = self.cs(xs)
 
         plt.plot(xs, ys, color='blue', label="Calibration Curve")
@@ -35,54 +41,36 @@ class scanner:
         plt.ylabel("Expected Distance")
         plt.title("Calibration Function")
         plt.legend()
-
+        plt.show()
         return fig
-
-    def linearize_raw(self, raw_distance):
-        interp_shifted = lambda x: self.cs(x) - raw_distance
-        interp_shifted.roots()
-        pass
 
     def plot_image(self, path: str) -> pd.DataFrame:
         """
         Loads in the scan data from the csv and converts it to a dataframe
         """
-        pd.read_csv(path, names=["r", "theta", "distance"])
+        data = pd.read_csv(path, names=["theta", "phi", "distance"])
 
-        data = np.genfromtxt(path, delimiter=',')
-        theta1=data[:,0]-45
-        theta2=data[:,1]-45
-        dist=data[:,2]
+        data.mask(data['distance']>81)
 
-        tf_2 = np.array([np.zeros(dist.shape), dist, np.zeros(dist.shape)]).T
-        theta_mat = np.array([theta1, theta2]).T * (np.pi/180)
-        theta_mat
+        theta1 = data["theta"].to_numpy(dtype=np.float)
+        theta2 = data["phi"].to_numpy(dtype=np.float)
+        dist = self.cs(-1.0 * data["distance"].to_numpy(dtype=np.float))
 
-        r = Rotation.from_euler('xz', theta_mat)
-        r.apply(tf_2)
+        plt.tripcolor(-1.0 * theta1, -1.0 * theta2, dist)
 
+        plt.show()
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(theta1, theta2, dist)
-        plt.xlabel("yoink")
-        plt.ylabel("yeet")
-
-
-        pass
-
-
-if __name__ == "__main__":
+def run():
     # Make a new scanner object with intrinsics
     my_scanner = scanner()
 
     # Calibrate the linearization from a file
-    my_scanner.calibrate("data/calibrate.csv")
+    my_scanner.calibrate("data/calibration.csv")
     my_scanner.plot_calibration_curve()
 
-    # Load in scanner data and plot it
-    my_scanner.plot_image()
+    # Plot the image
+    my_scanner.plot_image("data/scan2d.csv")
 
 
-
-
+if __name__ == "__main__":
+    run()
